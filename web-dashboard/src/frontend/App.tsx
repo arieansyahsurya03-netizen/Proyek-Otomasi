@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { io, Socket } from 'socket.io-client';
+import React, { useState, useEffect, useRef } from 'react';
+import './style.css';
 
 interface Sensor {
   id: number;
@@ -17,108 +17,206 @@ interface SystemState {
   lastUpdate: number;
 }
 
+// Demo data generator for when no backend is available (e.g. Vercel)
+const generateDemoSensors = (prev: Sensor[]): Sensor[] => {
+  if (prev.length === 0) {
+    return [
+      { id: 1, moisture: 65, temperature: 28.2, timestamp: Date.now() },
+      { id: 2, moisture: 72, temperature: 27.1, timestamp: Date.now() },
+      { id: 3, moisture: 58, temperature: 29.5, timestamp: Date.now() },
+    ];
+  }
+  return prev.map(s => ({
+    ...s,
+    moisture: Math.max(0, Math.min(100, s.moisture + (Math.random() - 0.5) * 4)),
+    temperature: Math.max(20, Math.min(40, s.temperature + (Math.random() - 0.5) * 0.5)),
+    timestamp: Date.now(),
+  }));
+};
+
 const App: React.FC = () => {
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [sensors, setSensors] = useState<Sensor[]>([]);
   const [pump, setPump] = useState<boolean>(false);
   const [valve, setValve] = useState<boolean>(false);
   const [mode, setMode] = useState<'AUTO' | 'MANUAL'>('AUTO');
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('--:--:--');
+  const socketRef = useRef<any>(null);
+  const demoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Establish Socket.IO Connection
+  // Try Socket.IO connection, fall back to demo mode
   useEffect(() => {
-    const newSocket = io();
-    setSocket(newSocket);
+    let connectionTimeout: ReturnType<typeof setTimeout>;
 
-    newSocket.on('connect', () => {
-      setIsConnected(true);
-      console.log('Connected to WebSocket server');
-    });
+    const tryConnect = async () => {
+      try {
+        // Dynamically import socket.io-client so Vercel doesn't crash if no server
+        const { io } = await import('socket.io-client');
+        const newSocket = io(window.location.origin, {
+          timeout: 3000,
+          reconnectionAttempts: 2,
+          reconnectionDelay: 1000,
+        });
 
-    newSocket.on('disconnect', () => {
+        socketRef.current = newSocket;
+
+        newSocket.on('connect', () => {
+          setIsConnected(true);
+          setIsDemoMode(false);
+          // Stop demo simulation if running
+          if (demoIntervalRef.current) {
+            clearInterval(demoIntervalRef.current);
+            demoIntervalRef.current = null;
+          }
+          console.log('Connected to WebSocket server');
+        });
+
+        newSocket.on('disconnect', () => {
+          setIsConnected(false);
+          console.log('Disconnected from WebSocket server');
+        });
+
+        newSocket.on('init', (data: SystemState) => {
+          setSensors(data.sensors || []);
+          setPump(data.pump);
+          setValve(data.valve);
+          setMode(data.mode);
+          updateTime();
+        });
+
+        newSocket.on('sensorUpdate', (data: SystemState) => {
+          setSensors(data.sensors || []);
+          setPump(data.pump);
+          setValve(data.valve);
+          updateTime();
+        });
+
+        newSocket.on('modeChanged', (data: { mode: 'AUTO' | 'MANUAL' }) => {
+          setMode(data.mode);
+        });
+
+        newSocket.on('pumpChanged', (data: { state: boolean }) => {
+          setPump(data.state);
+        });
+
+        newSocket.on('valveChanged', (data: { state: boolean }) => {
+          setValve(data.state);
+        });
+
+        newSocket.on('emergency', () => {
+          setPump(false);
+          setValve(false);
+          setMode('MANUAL');
+        });
+
+        // If not connected within 4 seconds, switch to demo mode
+        connectionTimeout = setTimeout(() => {
+          if (!newSocket.connected) {
+            console.log('Server unreachable — switching to Demo Mode');
+            newSocket.disconnect();
+            startDemoMode();
+          }
+        }, 4000);
+
+      } catch (err) {
+        console.log('Socket.IO import/connection failed — starting Demo Mode');
+        startDemoMode();
+      }
+    };
+
+    const startDemoMode = () => {
+      setIsDemoMode(true);
       setIsConnected(false);
-      console.log('Disconnected from WebSocket server');
-    });
-
-    newSocket.on('init', (data: SystemState) => {
-      console.log('Init data received:', data);
-      setSensors(data.sensors || []);
-      setPump(data.pump);
-      setValve(data.valve);
-      setMode(data.mode);
+      setSensors(generateDemoSensors([]));
       updateTime();
-    });
 
-    newSocket.on('sensorUpdate', (data: SystemState) => {
-      setSensors(data.sensors || []);
-      setPump(data.pump);
-      setValve(data.valve);
-      updateTime();
-    });
+      demoIntervalRef.current = setInterval(() => {
+        setSensors(prev => generateDemoSensors(prev));
+        updateTime();
+      }, 2000);
+    };
 
-    newSocket.on('modeChanged', (data: { mode: 'AUTO' | 'MANUAL' }) => {
-      setMode(data.mode);
-    });
-
-    newSocket.on('pumpChanged', (data: { state: boolean }) => {
-      setPump(data.state);
-    });
-
-    newSocket.on('valveChanged', (data: { state: boolean }) => {
-      setValve(data.state);
-    });
-
-    newSocket.on('emergency', () => {
-      setPump(false);
-      setValve(false);
-      setMode('MANUAL');
-      console.log('EMERGENCY STOP received');
-    });
+    tryConnect();
 
     return () => {
-      newSocket.disconnect();
+      clearTimeout(connectionTimeout);
+      if (socketRef.current) socketRef.current.disconnect();
+      if (demoIntervalRef.current) clearInterval(demoIntervalRef.current);
     };
   }, []);
 
-  // Update last update timestamp
   const updateTime = () => {
     const now = new Date();
     setLastUpdateTime(now.toLocaleTimeString('id-ID'));
   };
 
-  // 1. hitung average moisture langsung di front-end!
-  const averageMoisture = sensors.length > 0 
-    ? Math.round(sensors.reduce((sum, s) => sum + s.moisture, 0) / sensors.length) 
+  // Hitung average moisture langsung di front-end
+  const averageMoisture = sensors.length > 0
+    ? Math.round(sensors.reduce((sum, s) => sum + s.moisture, 0) / sensors.length)
     : 0;
+
+  // Auto pump logic in demo mode
+  useEffect(() => {
+    if (isDemoMode && mode === 'AUTO') {
+      if (averageMoisture < 45) {
+        setPump(true);
+        setValve(true);
+      } else if (averageMoisture >= 50) {
+        setPump(false);
+        setValve(false);
+      }
+    }
+  }, [averageMoisture, isDemoMode, mode]);
 
   // Actions
   const handleModeChange = (newMode: 'AUTO' | 'MANUAL') => {
-    if (socket) {
-      socket.emit('changeMode', { mode: newMode });
+    if (socketRef.current && isConnected) {
+      socketRef.current.emit('changeMode', { mode: newMode });
     }
+    setMode(newMode);
   };
 
   const handlePumpToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (socket && mode === 'MANUAL') {
-      socket.emit('setPump', { state: e.target.checked });
+    if (mode === 'MANUAL') {
+      const state = e.target.checked;
+      if (socketRef.current && isConnected) {
+        socketRef.current.emit('setPump', { state });
+      }
+      setPump(state);
     }
   };
 
   const handleValveToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (socket && mode === 'MANUAL') {
-      socket.emit('setValve', { state: e.target.checked });
+    if (mode === 'MANUAL') {
+      const state = e.target.checked;
+      if (socketRef.current && isConnected) {
+        socketRef.current.emit('setValve', { state });
+      }
+      setValve(state);
     }
   };
 
   const handleEmergencyStop = () => {
-    if (socket && confirm('Trigger EMERGENCY STOP?')) {
-      socket.emit('emergency');
+    if (window.confirm('Trigger EMERGENCY STOP?')) {
+      if (socketRef.current && isConnected) {
+        socketRef.current.emit('emergency');
+      }
+      setPump(false);
+      setValve(false);
+      setMode('MANUAL');
     }
   };
 
   return (
     <div className="container">
+      {/* DEMO MODE BANNER */}
+      {isDemoMode && (
+        <div className="demo-banner">
+          📡 Mode Demo — Data simulasi ditampilkan. Hubungkan ke ESP32 lokal untuk data real-time.
+        </div>
+      )}
+
       {/* HEADER */}
       <header className="header">
         <div className="header-left">
@@ -134,13 +232,13 @@ const App: React.FC = () => {
       <section className="card control-panel">
         <h2>Mode Kontrol</h2>
         <div className="mode-buttons">
-          <button 
+          <button
             className={`mode-btn ${mode === 'AUTO' ? 'active' : ''}`}
             onClick={() => handleModeChange('AUTO')}
           >
             🤖 AUTO
           </button>
-          <button 
+          <button
             className={`mode-btn ${mode === 'MANUAL' ? 'active' : ''}`}
             onClick={() => handleModeChange('MANUAL')}
           >
@@ -168,8 +266,8 @@ const App: React.FC = () => {
               <h3>Sensor {sensor.id}</h3>
               <div className="gauge-small">
                 <div className="gauge-bar">
-                  <div 
-                    className="gauge-fill" 
+                  <div
+                    className="gauge-fill"
                     style={{ width: `${sensor.moisture}%` }}
                   ></div>
                 </div>
@@ -195,9 +293,9 @@ const App: React.FC = () => {
               <p>{pump ? 'ON' : 'OFF'}</p>
             </div>
             <label className="toggle">
-              <input 
-                type="checkbox" 
-                checked={pump} 
+              <input
+                type="checkbox"
+                checked={pump}
                 onChange={handlePumpToggle}
                 disabled={mode === 'AUTO'}
               />
@@ -213,9 +311,9 @@ const App: React.FC = () => {
               <p>{valve ? 'ON' : 'OFF'}</p>
             </div>
             <label className="toggle">
-              <input 
-                type="checkbox" 
-                checked={valve} 
+              <input
+                type="checkbox"
+                checked={valve}
                 onChange={handleValveToggle}
                 disabled={mode === 'AUTO'}
               />
@@ -231,7 +329,7 @@ const App: React.FC = () => {
         <div className="status-grid">
           <div className="status-item">
             <label>Status:</label>
-            <span>{isConnected ? '🟢 Online' : '🔴 Offline'}</span>
+            <span>{isConnected ? '🟢 Online' : isDemoMode ? '🟡 Demo' : '🔴 Offline'}</span>
           </div>
           <div className="status-item">
             <label>Mode:</label>

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Penyiraman Otomatis Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --blue: #0ea5e9;
+      --emerald: #10b981;
+      --red: #ef4444;
+      --slate: #475569;
+      --white: #ffffff;
+      --bg: #0f172a;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1a1f35 100%);
+      color: var(--white);
+      padding: 20px;
+    }
+
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+    }
+
+    .title { font-size: 36px; font-weight: bold; color: var(--blue); }
+    
+    .btn-emergency {
+      background: linear-gradient(135deg, var(--red), #dc2626);
+      color: var(--white);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 12px;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-emergency:hover { box-shadow: 0 0 30px rgba(239, 68, 68, 0.6); }
+
+    .card {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .mode-control {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .mode-label { font-size: 18px; color: var(--blue); font-weight: 600; }
+
+    .mode-buttons { display: flex; gap: 12px; }
+
+    .mode-btn {
+      padding: 8px 20px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: transparent;
+      color: var(--slate);
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .mode-btn.active {
+      background: linear-gradient(135deg, var(--blue), var(--emerald));
+      color: var(--white);
+      border: none;
+      box-shadow: 0 0 16px rgba(14, 165, 233, 0.4);
+    }
+
+    .mode-display { font-size: 12px; color: var(--slate); margin-left: 20px; }
+
+    .hero-section {
+      text-align: center;
+      padding: 40px 24px !important;
+    }
+
+    .hero-title { font-size: 16px; color: var(--blue); margin-bottom: 15px; }
+
+    .hero-value {
+      font-size: 96px;
+      font-weight: bold;
+      background: linear-gradient(135deg, var(--blue), var(--red));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-subtitle { font-size: 13px; color: var(--slate); margin-top: 10px; opacity: 0.8; }
+
+    .sensors-title { font-size: 18px; color: var(--blue); font-weight: 600; margin-bottom: 16px; }
+
+    .sensor-item {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .sensor-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .sensor-name { font-size: 14px; color: var(--blue); font-weight: 600; }
+
+    .sensor-temp { font-size: 13px; color: var(--slate); opacity: 0.8; }
+
+    .sensor-bar {
+      height: 8px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 6px;
+      flex: 1;
+    }
+
+    .sensor-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00ff00, #00ffff, #ff00ff, #ff0000);
+      transition: width 0.5s;
+    }
+
+    .sensor-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sensor-value { font-size: 13px; color: var(--blue); font-weight: 600; }
+
+    .sensor-percentage {
+      width: 80px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      background: rgba(14, 165, 233, 0.1);
+      border: 2px solid rgba(14, 165, 233, 0.3);
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .sensor-percentage svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .sensor-percentage-text {
+      position: absolute;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--blue);
+    }
+
+    .sensor-percentage-unit {
+      font-size: 12px;
+      color: var(--slate);
+    }
+
+    .actuator-title { font-size: 18px; color: var(--blue); font-weight: 600; margin-bottom: 16px; }
+
+    .actuator-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      background: rgba(14, 165, 233, 0.08);
+      border: 1px solid rgba(14, 165, 233, 0.2);
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+
+    .actuator-info { display: flex; align-items: center; gap: 16px; }
+
+    .actuator-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(14, 165, 233, 0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--blue);
+    }
+
+    .actuator-name { font-size: 14px; font-weight: 600; color: var(--white); }
+
+    .actuator-status { font-size: 12px; color: var(--slate); opacity: 0.8; }
+
+    .toggle {
+      width: 60px;
+      height: 32px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.3);
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s;
+    }
+
+    .toggle.active { background: var(--emerald); border-color: var(--emerald); }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 26px;
+      height: 26px;
+      background: var(--white);
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: left 0.3s;
+    }
+
+    .toggle.active::after { left: 31px; }
+
+    .system-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .system-info-title { grid-column: 1 / -1; font-size: 18px; color: var(--blue); font-weight: 600; }
+
+    .info-item { }
+
+    .info-label { font-size: 12px; color: var(--slate); opacity: 0.8; text-transform: uppercase; margin-bottom: 6px; }
+
+    .info-value { font-size: 16px; font-weight: 600; color: var(--blue); display: flex; align-items: center; gap: 8px; }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--emerald);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="title">Penyiraman Otomatis</h1>
+      <button class="btn-emergency">● EMERGENCY STOP</button>
+    </div>
+
+    <div class="card mode-control">
+      <div class="mode-label">Mode Kontrol</div>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div class="mode-buttons">
+          <button class="mode-btn active" data-mode="auto">AUTO</button>
+          <button class="mode-btn" data-mode="manual">MANUAL</button>
+        </div>
+        <div class="mode-display">Mode: <span id="mode-display">AUTO</span></div>
+      </div>
+    </div>
+
+    <div class="card hero-section">
+      <div class="hero-title">Rata-rata Kelembaban (Dihitung di Front-End)</div>
+      <div class="hero-value" id="avg-humidity">--%</div>
+      <div class="hero-subtitle">Kelembaban rata-rata dari 3 sensor</div>
+    </div>
+
+    <div class="card">
+      <div class="sensors-title">5 Sensor Kelembaban</div>
+      <div class="sensor-item">
+        <div class="sensor-content">
+          <div class="sensor-header">
+            <div class="sensor-name">Sensor 1</div>
+            <div class="sensor-temp" id="temp-1">5.2°C</div>
+          </div>
+          <div class="sensor-bar"><div class="sensor-fill" id="bar-1" style="width: 65%"></div></div>
+          <div class="sensor-value" id="value-1">65%</div>
+        </div>
+        <div class="sensor-percentage">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(14, 165, 233, 0.2)" stroke-width="8"></circle>
+            <circle cx="50" cy="50" r="45" fill="none" stroke="url(#grad1)" stroke-width="8" id="circle-1" style="stroke-dasharray: 141.3; stroke-dashoffset: 50;"></circle>
+            <defs>
+              <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#00ff00;stop-opacity:1" />
+                <stop offset="50%" style="stop-color:#00ffff;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#ff0000;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="sensor-percentage-text"><span id="percent-1">65</span><span class="sensor-percentage-unit">%</span></div>
+        </div>
+      </div>
+
+      <div class="sensor-item">
+        <div class="sensor-content">
+          <div class="sensor-header">
+            <div class="sensor-name">Sensor 2</div>
+            <div class="sensor-temp" id="temp-2">31.4°C</div>
+          </div>
+          <div class="sensor-bar"><div class="sensor-fill" id="bar-2" style="width: 72%"></div></div>
+          <div class="sensor-value" id="value-2">72%</div>
+        </div>
+        <div class="sensor-percentage">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(14, 165, 233, 0.2)" stroke-width="8"></circle>
+            <circle cx="50" cy="50" r="45" fill="none" stroke="url(#grad2)" stroke-width="8" id="circle-2" style="stroke-dasharray: 141.3; stroke-dashoffset: 40;"></circle>
+            <defs>
+              <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#00ff00;stop-opacity:1" />
+                <stop offset="50%" style="stop-color:#00ffff;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#ff0000;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="sensor-percentage-text"><span id="percent-2">72</span><span class="sensor-percentage-unit">%</span></div>
+        </div>
+      </div>
+
+      <div class="sensor-item">
+        <div class="sensor-content">
+          <div class="sensor-header">
+            <div class="sensor-name">Sensor 3</div>
+            <div class="sensor-temp" id="temp-3">30.4°C</div>
+          </div>
+          <div class="sensor-bar"><div class="sensor-fill" id="bar-3" style="width: 58%"></div></div>
+          <div class="sensor-value" id="value-3">58%</div>
+        </div>
+        <div class="sensor-percentage">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(14, 165, 233, 0.2)" stroke-width="8"></circle>
+            <circle cx="50" cy="50" r="45" fill="none" stroke="url(#grad3)" stroke-width="8" id="circle-3" style="stroke-dasharray: 141.3; stroke-dashoffset: 59;"></circle>
+            <defs>
+              <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#00ff00;stop-opacity:1" />
+                <stop offset="50%" style="stop-color:#00ffff;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#ff0000;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="sensor-percentage-text"><span id="percent-3">58</span><span class="sensor-percentage-unit">%</span></div>
+        </div>
+    </div>
+
+    <div class="card">
+      <div class="actuator-title">Status Aktuator</div>
+      <div class="actuator-item">
+        <div class="actuator-info">
+          <div class="actuator-icon">💧</div>
+          <div>
+            <div class="actuator-name">Pompa Air</div>
+            <div class="actuator-status" id="pump-status">OFF</div>
+          </div>
+        </div>
+        <div class="toggle" id="pump-toggle" onclick="togglePump()"></div>
+      </div>
+
+      <div class="actuator-item">
+        <div class="actuator-info">
+          <div class="actuator-icon">🔧</div>
+          <div>
+            <div class="actuator-name">Solenoid Valve</div>
+            <div class="actuator-status" id="valve-status">OFF</div>
+          </div>
+        </div>
+        <div class="toggle" id="valve-toggle" onclick="toggleValve()"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="system-info">
+        <div class="system-info-title">Informasi Sistem</div>
+        <div class="info-item">
+          <div class="info-label">Status:</div>
+          <div class="info-value"><div class="status-dot"></div> Online</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Mode:</div>
+          <div class="info-value" id="system-mode">AUTO</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Update:</div>
+          <div class="info-value">22:43:39</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const sensors = [
+      { humidity: 65, temp: 5.2 },
+      { humidity: 72, temp: 31.4 },
+      { humidity: 58, temp: 30.4 }
+    ];
+
+    let state = { mode: 'AUTO', pumpOn: false, valveOn: false };
+
+    function updateDisplay() {
+      let total = 0;
+      sensors.forEach((s, i) => {
+        const n = i + 1;
+        const humidity = Math.round(s.humidity);
+        
+        // Update bar
+        document.getElementById(`bar-${n}`).style.width = humidity + '%';
+        document.getElementById(`value-${n}`).textContent = humidity + '%';
+        document.getElementById(`temp-${n}`).textContent = s.temp.toFixed(1) + '°C';
+        
+        // Update circular progress
+        const circumference = 2 * Math.PI * 45; // radius = 45
+        const offset = circumference - (humidity / 100) * circumference;
+        const circle = document.getElementById(`circle-${n}`);
+        if (circle) {
+          circle.style.strokeDashoffset = offset;
+        }
+        document.getElementById(`percent-${n}`).textContent = humidity;
+        
+        total += humidity;
+      });
+      const avg = Math.round(total / 3);
+      document.getElementById('avg-humidity').textContent = avg + '%';
+    }
+
+    function togglePump() {
+      state.pumpOn = !state.pumpOn;
+      document.getElementById('pump-toggle').classList.toggle('active');
+      document.getElementById('pump-status').textContent = state.pumpOn ? 'ON' : 'OFF';
+    }
+
+    function toggleValve() {
+      state.valveOn = !state.valveOn;
+      document.getElementById('valve-toggle').classList.toggle('active');
+      document.getElementById('valve-status').textContent = state.valveOn ? 'ON' : 'OFF';
+    }
+
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.mode = btn.dataset.mode.toUpperCase();
+        document.getElementById('mode-display').textContent = state.mode;
+        document.getElementById('system-mode').textContent = state.mode;
+      });
+    });
+
+    setInterval(() => {
+      sensors.forEach(s => {
+        s.humidity = Math.max(0, Math.min(100, s.humidity + (Math.random() - 0.5) * 6));
+        s.temp = Math.max(0, s.temp + (Math.random() - 0.5) * 2);
+      });
+      updateDisplay();
+    }, 3000);
+
+    updateDisplay();
+  </script>
+</body>
+</html>
