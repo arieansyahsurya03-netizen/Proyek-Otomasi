@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Penyiraman Otomatis — Dashboard</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1 class="title">Penyiraman Otomatis</h1>
+      <div class="header-actions">
+        <button id="emergencyBtn" class="btn emergency">EMERGENCY STOP</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="hero">
+        <div class="hero-card glass">
+          <div class="hero-label">Average Humidity</div>
+          <div id="avgValue" class="hero-value">--%</div>
+          <div class="hero-sub">Live from 5 sensors</div>
+        </div>
+      </section>
+
+      <section class="sensors">
+        <div class="sensors-grid">
+          <!-- Five gauges -->
+          <div class="gauge-card glass" data-sensor="1">
+            <svg class="gauge" viewBox="0 0 120 60" preserveAspectRatio="xMidYMid meet"></svg>
+            <div class="gauge-label">Sensor 1</div>
+            <div class="gauge-value">--%</div>
+          </div>
+
+          <div class="gauge-card glass" data-sensor="2">
+            <svg class="gauge" viewBox="0 0 120 60" preserveAspectRatio="xMidYMid meet"></svg>
+            <div class="gauge-label">Sensor 2</div>
+            <div class="gauge-value">--%</div>
+          </div>
+
+          <div class="gauge-card glass" data-sensor="3">
+            <svg class="gauge" viewBox="0 0 120 60" preserveAspectRatio="xMidYMid meet"></svg>
+            <div class="gauge-label">Sensor 3</div>
+            <div class="gauge-value">--%</div>
+          </div>
+
+          <div class="gauge-card glass" data-sensor="4">
+            <svg class="gauge" viewBox="0 0 120 60" preserveAspectRatio="xMidYMid meet"></svg>
+            <div class="gauge-label">Sensor 4</div>
+            <div class="gauge-value">--%</div>
+          </div>
+
+          <div class="gauge-card glass" data-sensor="5">
+            <svg class="gauge" viewBox="0 0 120 60" preserveAspectRatio="xMidYMid meet"></svg>
+            <div class="gauge-label">Sensor 5</div>
+            <div class="gauge-value">--%</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="controls">
+        <div class="control-panel glass">
+          <div class="mode-selector">
+            <button id="autoBtn" class="mode active">AUTO</button>
+            <button id="manualBtn" class="mode">MANUAL</button>
+          </div>
+
+          <div class="actuators">
+            <div class="actuator">
+              <div class="actuator-icon" id="pumpIcon" data-on="true">
+                <svg viewBox="0 0 24 24"><path d="M12 2v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 8h14v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+              </div>
+              <div class="actuator-label">Water Pump</div>
+              <div class="actuator-status" id="pumpStatus">ON</div>
+            </div>
+
+            <div class="actuator">
+              <div class="actuator-icon" id="valveIcon" data-on="false">
+                <svg viewBox="0 0 24 24"><path d="M3 12h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12h-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+              </div>
+              <div class="actuator-label">Solenoid Valve</div>
+              <div class="actuator-status" id="valveStatus">OFF</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-note">Prototype UI — Responsive, Glassmorphism, 4K ready</div>
+    </footer>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
